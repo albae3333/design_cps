@@ -12,6 +12,8 @@ polygon = []
 clicked = False
 imgpredsize = 128
 
+IMG_NAME_START = 163
+
 
 def mouse_drawing(event, x, y, flags, params):
     global polygon
@@ -78,8 +80,8 @@ for i in range(fromto[0], fromto[1]):
             cv2.waitKey(0)
 
             imgnorm = imgnorm*255
-            cv2.imwrite("./app/dataset/cut/"+str(i)+".png", original)
-            cv2.imwrite("./app/dataset/maske/"+str(i)+".png", imgnorm)
+            cv2.imwrite("./app/dataset/cut/"+str(i+IMG_NAME_START)+".png", original)
+            cv2.imwrite("./app/dataset/maske/"+str(i+IMG_NAME_START)+".png", imgnorm)
 
             polygon.clear()
             cv2.destroyWindow("Cut")

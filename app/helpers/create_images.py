@@ -177,135 +177,134 @@ if LOG_FILENAMES and (OVERWRITE or not os.path.isfile(path + FILETYPE)):
 
 FILES.sort(key=takeFirst)
 
-while True:
-    for fileIndex in range(0,len(FILES)):
-        fle,mask = FILES[fileIndex]
-        print("Current file: " + fle + " (" + str(fileIndex) + ") from total of " + str(len(FILES)) + " files.")
-        # start processing
-        imgClean = cv.imread(fle, cv.IMREAD_COLOR) # basic image
-        maskClean = cv.imread(mask, cv.IMREAD_GRAYSCALE) # basic mask
-        # resize operation
-        resized = resize(imgClean, SCALEPERCENT)
-        resizedMask = resize(maskClean, SCALEPERCENT)
+for fileIndex in range(0,len(FILES)):
+    fle,mask = FILES[fileIndex]
+    print("Current file: " + fle + " (" + str(fileIndex+1) + ") from total of " + str(len(FILES)) + " files.")
+    # start processing
+    imgClean = cv.imread(fle, cv.IMREAD_COLOR) # basic image
+    maskClean = cv.imread(mask, cv.IMREAD_GRAYSCALE) # basic mask
+    # resize operation
+    resized = resize(imgClean, SCALEPERCENT)
+    resizedMask = resize(maskClean, SCALEPERCENT)
 
-        # widen picture by replicating border pixels
-        pxls = int(resized.shape[0] * REPLICATIONPERCENT / 100)
-        resized = cv.copyMakeBorder(resized,pxls,pxls,pxls,pxls,cv.BORDER_REPLICATE)
-        resizedMask = cv.copyMakeBorder(resizedMask,pxls,pxls,pxls,pxls,cv.BORDER_CONSTANT, value=(0,0,0))
+    # widen picture by replicating border pixels
+    pxls = int(resized.shape[0] * REPLICATIONPERCENT / 100)
+    resized = cv.copyMakeBorder(resized,pxls,pxls,pxls,pxls,cv.BORDER_REPLICATE)
+    resizedMask = cv.copyMakeBorder(resizedMask,pxls,pxls,pxls,pxls,cv.BORDER_CONSTANT, value=(0,0,0))
 
-        # initialize variables
-        # picture size
-        rectangle[0] = resized.shape[1] / 2
-        rectangle[1] = resized.shape[0] / 2
-        crosshair[0] = resized.shape[1] / 2
-        crosshair[1] = resized.shape[0] / 2
+    # initialize variables
+    # picture size
+    rectangle[0] = resized.shape[1] / 2
+    rectangle[1] = resized.shape[0] / 2
+    crosshair[0] = resized.shape[1] / 2
+    crosshair[1] = resized.shape[0] / 2
 
-        # save flag (go=1 starts image processing)
-        go = 0
+    # save flag (go=1 starts image processing)
+    go = 0
 
-        # distance to middle
-        distance = [0,0]
+    # distance to middle
+    distance = [0,0]
 
-        while go == 0 and LOG_FILENAMES == True:
-            # copy image from "clean" duplicate
+    while go == 0 and LOG_FILENAMES == True:
+        # copy image from "clean" duplicate
+        for i in range(2):
+            distance[i] = crosshair[i] - resized.shape[1-i] / 2
+            # print(str(i) +" - POS_CROSS" + ": " + str(crosshair[i]) + ";SHAPE: " + str(resized.shape[1-i]))
+        if distance != [0,0]:
+            resized = offsetImage(resized, -1 * distance[0], -1 * distance[1])
+            resizedMask = offsetImage(resizedMask, -1 * distance[0], -1 * distance[1])
             for i in range(2):
-                distance[i] = crosshair[i] - resized.shape[1-i] / 2
-                # print(str(i) +" - POS_CROSS" + ": " + str(crosshair[i]) + ";SHAPE: " + str(resized.shape[1-i]))
-            if distance != [0,0]:
-                resized = offsetImage(resized, -1 * distance[0], -1 * distance[1])
-                resizedMask = offsetImage(resizedMask, -1 * distance[0], -1 * distance[1])
-                for i in range(2):
-                    crosshair[i] = resized.shape[1-i] / 2
+                crosshair[i] = resized.shape[1-i] / 2
+        img = resized.copy()
+        msk = resizedMask.copy()
+        # img2 = resized.copy()
+        # calc point A rect
+        pRectX = (int(rectangle[0] + rectOffA[0]), int(rectangle[1] + rectOffA[1]))
+        # calc point B rect
+        pRectY = (int(rectangle[0] + rectOffB[0]), int(rectangle[1] + rectOffB[1]))
+        # calc point A border
+        pBorderX = (int(rectangle[0] + hypo(rectOffA[0])), int(rectangle[1] + hypo(rectOffA[1])))
+        # calc point B border
+        pBorderY = (int(rectangle[0] + hypo(rectOffB[0])), int(rectangle[1] + hypo(rectOffB[1])))
+        # draw rectangle
+        cv.rectangle(img, pRectX, pRectY, COLORRECT, THICKNESS)
+        #cv.drawMarker(img, pRectX, COLORMARK, cv.MARKER_DIAMOND, 15, THICKNESS)
+        #cv.drawMarker(img, pRectY, COLORMARK, cv.MARKER_DIAMOND, 15, THICKNESS)
+        # draw border
+        cv.rectangle(img, pBorderX, pBorderY, COLORMAX, THICKNESS)
+        # draw marker
+        cv.drawMarker(img, (int(crosshair[0]), int(crosshair[1])), COLORMARK, cv.MARKER_CROSS, 25, THICKNESS)
+        # show image on canvas
+        cv.imshow(WINDOWNAME, img)
+        cv.imshow(WINDOWNAME + "mask", msk)
+        # wait for key press event
+        CROPBORDER = abs(rectOffA[0]) + abs(rectOffA[1])
+        MAPPEDPIXELS[0] = pixelMap(crosshair[0] - pRectX[0], CROPBORDER, 128)
+        MAPPEDPIXELS[1] = pixelMap(crosshair[1] - (resized.shape[0] - pRectX[1]), CROPBORDER, 128)
+        k = cv.waitKey(1)
+        # print(k)
+        # react on key event
+        if k == 113: # q = quit
+            cv.destroyAllWindows()
+            exit(0)
+        elif k == 115: # s = save
+            go = 1
+
+    # rotation
+    angle = 0
+    fileIndex = 0
+
+    # main
+    while angle < 360:
+        # increase angle every 3 iterations
+        angle += ROTATIONSPEED
+        for x in range(-1,1):
+            # flip image in every drection including both directions
+            # and save a copy of the current image rotation-flip-combination
+            # as 128x128 px formatted png resulting in ~ 4 images/angle
             img = resized.copy()
             msk = resizedMask.copy()
-            # img2 = resized.copy()
-            # calc point A rect
-            pRectX = (int(rectangle[0] + rectOffA[0]), int(rectangle[1] + rectOffA[1]))
-            # calc point B rect
-            pRectY = (int(rectangle[0] + rectOffB[0]), int(rectangle[1] + rectOffB[1]))
-            # calc point A border
-            pBorderX = (int(rectangle[0] + hypo(rectOffA[0])), int(rectangle[1] + hypo(rectOffA[1])))
-            # calc point B border
-            pBorderY = (int(rectangle[0] + hypo(rectOffB[0])), int(rectangle[1] + hypo(rectOffB[1])))
-            # draw rectangle
-            cv.rectangle(img, pRectX, pRectY, COLORRECT, THICKNESS)
-            #cv.drawMarker(img, pRectX, COLORMARK, cv.MARKER_DIAMOND, 15, THICKNESS)
-            #cv.drawMarker(img, pRectY, COLORMARK, cv.MARKER_DIAMOND, 15, THICKNESS)
-            # draw border
-            cv.rectangle(img, pBorderX, pBorderY, COLORMAX, THICKNESS)
-            # draw marker
-            cv.drawMarker(img, (int(crosshair[0]), int(crosshair[1])), COLORMARK, cv.MARKER_CROSS, 25, THICKNESS)
-            # show image on canvas
-            cv.imshow(WINDOWNAME, img)
-            cv.imshow(WINDOWNAME + "mask", msk)
-            # wait for key press event
-            CROPBORDER = abs(rectOffA[0]) + abs(rectOffA[1])
-            MAPPEDPIXELS[0] = pixelMap(crosshair[0] - pRectX[0], CROPBORDER, 128)
-            MAPPEDPIXELS[1] = pixelMap(crosshair[1] - (resized.shape[0] - pRectX[1]), CROPBORDER, 128)
-            k = cv.waitKey(1)
-            # print(k)
-            # react on key event
-            if k == 113: # q = quit
-                cv.destroyAllWindows()
-                exit(0)
-            elif k == 115: # s = save
-                go = 1
-
-        # rotation
-        angle = 0
-        fileIndex = 0
-
-        # main
-        while angle < 360:
-            # increase angle every 3 iterations
-            angle += ROTATIONSPEED
-            for x in range(-1,1):
-                # flip image in every drection including both directions
-                # and save a copy of the current image rotation-flip-combination
-                # as 128x128 px formatted png resulting in ~ 4 images/angle
-                img = resized.copy()
-                msk = resizedMask.copy()
-                img = im.rotate(img, angle) #, center=(crosshair[1], crosshair[0]))
-                msk = im.rotate(msk, angle)
-                img = cv.flip(img, x)
-                msk = cv.flip(msk, x)
-                if(LOG_FILENAMES):
-                    cv.imshow(WINDOWNAME, img)
-                    cv.imshow(WINDOWNAME + "mask", msk)
-                    cv.waitKey(20)
+            img = im.rotate(img, angle) #, center=(crosshair[1], crosshair[0]))
+            msk = im.rotate(msk, angle)
+            img = cv.flip(img, x)
+            msk = cv.flip(msk, x)
+            if(LOG_FILENAMES):
+                cv.imshow(WINDOWNAME, img)
+                cv.imshow(WINDOWNAME + "mask", msk)
+                cv.waitKey(20)
+            path = OUTPUT + "/cuts/" + getFileName(fle) + "_" + str(fileIndex)
+            path_mask = OUTPUT + "/masks/" + getFileName(mask) + "_" + str(fileIndex)
+            while not OVERWRITE and os.path.isfile(path + IMAGETYPE):
+                print(path + "already exists. Skipping it.")
+                fileIndex += 1
                 path = OUTPUT + "/cuts/" + getFileName(fle) + "_" + str(fileIndex)
                 path_mask = OUTPUT + "/masks/" + getFileName(mask) + "_" + str(fileIndex)
-                while not OVERWRITE and os.path.isfile(path + IMAGETYPE):
-                    print(path + "already exists. Skipping it.")
-                    fileIndex += 1
-                    path = OUTPUT + "/cuts/" + getFileName(fle) + "_" + str(fileIndex)
-                    path_mask = OUTPUT + "/masks/" + getFileName(mask) + "_" + str(fileIndex)
-                if(LOG_FILENAMES):
-                    print(path + IMAGETYPE)
-                # calc image crop
-                y = int(rectangle[1] - rectOffA[1])
-                x = int(rectangle[0] - rectOffB[0])
-                h = abs(int(rectOffB[1] - rectOffA[1]))
-                w = abs(int(rectOffB[0] - rectOffA[0]))
-                # show and save crop
-                crop_img = img[y:y+h, x:x+w].copy()
-                crop_mask = msk[y:y+h, x:x+w].copy()
-                # if x < 0:
-                #     MAPPEDPIXELS[0] = 128 - MAPPEDPIXELS[0]
-                #     MAPPEDPIXELS[1] = 128 - MAPPEDPIXELS[1]
-                # elif x > 0:
-                #     MAPPEDPIXELS[0] = 128 - MAPPEDPIXELS[0]
-                # elif x == 0:
-                #     MAPPEDPIXELS[1] = 128 - MAPPEDPIXELS[1]
-                if LOG_FILENAMES:
-                    TXTCONTENT = path + FILETYPE + ";" + str(MAPPEDPIXELS[0]) + ";" + str(MAPPEDPIXELS[1]) + "\n"
-                    txt = open(OUTPUT + "/cuts/log" + FILETYPE, "a")
-                    txt.write(TXTCONTENT)
-                    txt.close()
-                    TXTCONTENT = path_mask + FILETYPE + ";" + str(MAPPEDPIXELS[0]) + ";" + str(MAPPEDPIXELS[1]) + "\n"
-                    txt_mask = open(OUTPUT + "/masks/log" + FILETYPE, "a")
-                    txt_mask.write(TXTCONTENT)
-                    txt_mask.close()
-                cv.imwrite(path + IMAGETYPE, resize(crop_img, (128, 128)))
-                cv.imwrite(path_mask + IMAGETYPE, resize(crop_mask, (128, 128)))
-                fileIndex += 1
+            if(LOG_FILENAMES):
+                print(path + IMAGETYPE)
+            # calc image crop
+            y = int(rectangle[1] - rectOffA[1])
+            x = int(rectangle[0] - rectOffB[0])
+            h = abs(int(rectOffB[1] - rectOffA[1]))
+            w = abs(int(rectOffB[0] - rectOffA[0]))
+            # show and save crop
+            crop_img = img[y:y+h, x:x+w].copy()
+            crop_mask = msk[y:y+h, x:x+w].copy()
+            # if x < 0:
+            #     MAPPEDPIXELS[0] = 128 - MAPPEDPIXELS[0]
+            #     MAPPEDPIXELS[1] = 128 - MAPPEDPIXELS[1]
+            # elif x > 0:
+            #     MAPPEDPIXELS[0] = 128 - MAPPEDPIXELS[0]
+            # elif x == 0:
+            #     MAPPEDPIXELS[1] = 128 - MAPPEDPIXELS[1]
+            if LOG_FILENAMES:
+                TXTCONTENT = path + FILETYPE + ";" + str(MAPPEDPIXELS[0]) + ";" + str(MAPPEDPIXELS[1]) + "\n"
+                txt = open(OUTPUT + "/cuts/log" + FILETYPE, "a")
+                txt.write(TXTCONTENT)
+                txt.close()
+                TXTCONTENT = path_mask + FILETYPE + ";" + str(MAPPEDPIXELS[0]) + ";" + str(MAPPEDPIXELS[1]) + "\n"
+                txt_mask = open(OUTPUT + "/masks/log" + FILETYPE, "a")
+                txt_mask.write(TXTCONTENT)
+                txt_mask.close()
+            cv.imwrite(path + IMAGETYPE, resize(crop_img, (128, 128)))
+            cv.imwrite(path_mask + IMAGETYPE, resize(crop_mask, (128, 128)))
+            fileIndex += 1
