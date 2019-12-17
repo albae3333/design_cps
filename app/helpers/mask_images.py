@@ -33,8 +33,8 @@ def normalize(data):
 
 dirlist = os.listdir("./input/with_pipe")
 dirlist.sort()
-fromto = (0,120)
-for i in range(fromto[0], len(dirlist)):
+fromto = (0,len(dirlist))
+for i in range(fromto[0], fromto[1]):
     print(dirlist[i])
     img = join("./input/with_pipe", dirlist[i])
 
