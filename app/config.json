@@ -1,0 +1,6 @@
+{
+    "File-Handling": {
+        "Input-Path": "./input",
+        "Output-Path": "./output"
+    }
+}
