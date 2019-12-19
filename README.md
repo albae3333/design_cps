@@ -15,12 +15,10 @@ sudo pacman -S pandoc
 pandoc -o <output_file> <input_file>
 ```
 
-## Generate Documentation
-
-### NPM
+### Generate Documentation
 
 ```console
-npm run build-doc
+./documentation/doc_gen.sh
 ```
 
 ### Additional Link
