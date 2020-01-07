@@ -4,3 +4,6 @@ venv
 .vscode
 output
 *.zip
+app/network/images
+app/network/test
+app/network/.ipynb_checkpoints
